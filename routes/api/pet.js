@@ -2,7 +2,8 @@ const debug = require('debug')('app:routes:api:pet');
 const debugError = require('debug')('app:error');
 const express = require('express');
 const { nanoid } = require('nanoid');
-
+const dbModule = require('../../database');
+const {newId} = require('../../database');
 
 
 const petsArray = [
@@ -15,18 +16,19 @@ const petsArray = [
 const router = express.Router();
 
 //define routes
-router.get('/api/pet/list', (req, res, next) => {
-  res.json(petsArray);
+router.get('/api/pet/list', async (req, res, next) => {
+  const pets = await dbModule.findAllPets();
+  res.json(pets);
 });
 
-router.get('/api/pet/:petId', (req, res, next) => {
-  const petId = req.params.petId;
-
-  const foundPet = petsArray.find((x) => x._id == petId);
-  if (!foundPet) {
-    res.status(404).json({ error: 'Pet Not Found' });
-  } else {
-    res.json(foundPet);
+router.get('/api/pet/:petId', async (req, res, next) => {
+  try {
+  const petId = newId(req.params.petId);
+  const pet = await dbModule.findPetById(petId);
+  debug(pet)
+  res.json(pet);
+  } catch (err) {
+    next(err);
   }
 });
 //create
@@ -59,11 +61,12 @@ router.put('/api/pet/new', (req, res, next) => {
   }
 });
 //update
-router.put('/api/pet/:petId', (req, res, next) => {
+router.put('/api/pet/:petId', async (req, res, next) => {
   const petId = req.params.petId;
-  const { species, name, gender, age } = req.body;
+  const update = req.body;
+  debug(`update pet ${petId}, update`)
 
-  const pet = petsArray.find((x) => x._id == petId);
+  const pet = await dbModule.findPetById(petId);
   if (!pet) {
     res.status(404).json({ error: 'Pet Not Found' });
   } else {
